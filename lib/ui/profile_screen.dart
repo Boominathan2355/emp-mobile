@@ -7,8 +7,9 @@ import '../data/session.dart';
 import '../services/profile_service.dart';
 import '../state/auth_controller.dart';
 
-/// Profile tab: avatar + details card + biometric toggle + logout.
-/// Organization/Department are shown as placeholders — the backend user object
+/// Profile tab: identity header card (avatar + name + role + status chip),
+/// detail rows, biometric toggle, logout.
+/// Organization/Department are placeholders — the backend user object
 /// (UserResponse) has no such fields yet.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.user});
@@ -38,53 +39,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          const SizedBox(height: 8),
-          Center(
-            child: CircleAvatar(
-              radius: 44,
-              backgroundColor: AppTheme.card,
-              backgroundImage: photo != null ? NetworkImage(photo) : null,
-              child: photo == null
-                  ? Text(_initial(u.name),
-                      style: const TextStyle(fontSize: 34))
-                  : null,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: TextButton(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Photo upload — POST /api/users/{id}/photo')),
-              ),
-              child: const Text('Upload photo'),
-            ),
-          ),
-          const SizedBox(height: 8),
           Container(
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: AppTheme.card,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               children: [
-                _row('Name', u.name),
-                _row('Employee code', u.code),
-                _row('Email', u.email ?? '—'),
-                _row('Mobile', u.mobile),
-                _row('Role', u.role ?? '—'),
-                _row('Organization', '—'), // not in UserResponse yet
-                _row('Department', '—'), // not in UserResponse yet
-                _row('Status', u.status.toLowerCase(), last: true),
+                CircleAvatar(
+                  radius: 44,
+                  backgroundColor: AppTheme.cardAlt,
+                  backgroundImage: photo != null ? NetworkImage(photo) : null,
+                  child: photo == null
+                      ? Text(_initial(u.name),
+                          style: const TextStyle(fontSize: 34))
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                Text(u.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(
+                  u.role != null && u.role!.isNotEmpty ? u.role! : '—',
+                  style:
+                      const TextStyle(fontSize: 14, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 6),
+                Text('EMP · ${u.code}',
+                    style: const TextStyle(
+                        fontSize: 13, color: AppTheme.textMuted)),
+                const SizedBox(height: 12),
+                Chip(
+                  backgroundColor: u.status == 'ACTIVE'
+                      ? AppTheme.success.withValues(alpha: 0.15)
+                      : AppTheme.cardAlt,
+                  label: Text(
+                    u.status == 'ACTIVE' ? 'Active' : u.status.toLowerCase(),
+                    style: TextStyle(
+                      color: u.status == 'ACTIVE'
+                          ? AppTheme.success
+                          : AppTheme.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Photo upload — POST /api/users/{id}/photo')),
+                  ),
+                  icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                  label: const Text('Upload photo'),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.card,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                _row(Icons.mail_outline, 'Email', u.email ?? '—'),
+                _row(Icons.phone_outlined, 'Mobile', u.mobile),
+                _row(Icons.badge_outlined, 'Employee code', u.code),
+                _row(Icons.business_outlined, 'Organization', '—'),
+                _row(Icons.account_tree_outlined, 'Department', '—'),
+                _row(Icons.fact_check_outlined, 'Username', u.username,
+                    last: true),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
               color: AppTheme.card,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: SwitchListTile(
               value: _biometric,
@@ -117,9 +157,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static String _initial(String name) =>
       name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
 
-  Widget _row(String label, String value, {bool last = false}) {
+  Widget _row(IconData icon, String label, String value, {bool last = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         border: last
             ? null
@@ -128,6 +168,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: [
+          Icon(icon, size: 18, color: AppTheme.textMuted),
+          const SizedBox(width: 14),
           Text(label, style: const TextStyle(color: AppTheme.textMuted)),
           const Spacer(),
           Flexible(

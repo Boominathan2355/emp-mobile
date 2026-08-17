@@ -21,7 +21,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final tabs = <Widget>[
       DutyScreen(user: widget.user),
-      const HistoryScreen(),
+      HistoryScreen(user: widget.user),
       ProfileScreen(user: widget.user),
     ];
     return Scaffold(

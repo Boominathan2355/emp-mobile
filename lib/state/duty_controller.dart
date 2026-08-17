@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../core/config.dart';
 import '../data/models.dart';
@@ -23,6 +24,23 @@ class DutyController extends ChangeNotifier {
   bool locationOk = false;
   String? error;
   Timer? _timer;
+  Timer? _clock;
+
+  DateTime? _dutySince;
+  Duration _completedSession = Duration.zero;
+  double _distanceKm = 0;
+  Position? _lastPos;
+
+  /// When the current (or last) duty session began.
+  DateTime? get dutySince => _dutySince;
+
+  /// Elapsed duty time: live while on duty, final once checked out.
+  Duration get sessionDuration => onDuty && _dutySince != null
+      ? DateTime.now().difference(_dutySince!)
+      : _completedSession;
+
+  /// Kilometres covered during today's duty session (from GPS pings).
+  double get todayDistanceKm => _distanceKm;
 
   bool get verifying =>
       step != VerifyStep.idle &&
@@ -54,6 +72,10 @@ class DutyController extends ChangeNotifier {
       await _tracking.ingest(
           user: _user, status: PresenceStatus.onDuty, pos: pos);
 
+      _dutySince = DateTime.now();
+      _completedSession = Duration.zero;
+      _distanceKm = 0;
+      _lastPos = pos;
       onDuty = true;
       step = VerifyStep.done;
       _startPinging();
@@ -72,17 +94,34 @@ class DutyController extends ChangeNotifier {
       try {
         await _tracking.ensureLocationReady();
         final pos = await _tracking.currentPosition();
+        final last = _lastPos;
+        if (last != null) {
+          _distanceKm +=
+              Geolocator.distanceBetween(
+                    last.latitude, last.longitude, pos.latitude, pos.longitude,
+                  ) /
+                  1000.0;
+        }
+        _lastPos = pos;
+        notifyListeners();
         await _tracking.ingest(
             user: _user, status: PresenceStatus.onDuty, pos: pos);
       } catch (_) {
         // Transient failure — keep the timer; next tick retries.
       }
     });
+    // A lightweight 1s tick so the on-duty clock and session stats stay live.
+    _clock?.cancel();
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (onDuty) notifyListeners();
+    });
   }
 
   Future<void> checkOut() async {
     _timer?.cancel();
     _timer = null;
+    _clock?.cancel();
+    _clock = null;
     try {
       await _tracking.ensureLocationReady();
       final pos = await _tracking.currentPosition();
@@ -91,6 +130,9 @@ class DutyController extends ChangeNotifier {
     } catch (_) {
       // Even if the final report fails, we still go off duty locally.
     }
+    _completedSession = sessionDuration;
+    _dutySince = null;
+    _lastPos = null;
     onDuty = false;
     step = VerifyStep.idle;
     notifyListeners();
@@ -99,6 +141,7 @@ class DutyController extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _clock?.cancel();
     super.dispose();
   }
 }
