@@ -53,6 +53,19 @@ class AppUser {
         role: j['role'] as String?,
         status: j['status'] as String? ?? 'ACTIVE',
       );
+
+  /// Minimal profile used when the session is valid but the profile lookup
+  /// failed. The login handle stands in for the employee code so tracking
+  /// pings still carry an identifier the backend can correlate (never "0");
+  /// the remaining fields stay empty and callers fall back to their defaults.
+  factory AppUser.placeholder(String username) => AppUser(
+        id: 0,
+        code: username,
+        username: username,
+        name: username,
+        mobile: '',
+        status: 'ACTIVE',
+      );
 }
 
 /// One day's attendance row, as returned by `GET /api/attendance`
