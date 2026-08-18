@@ -63,11 +63,30 @@ Add inside `<manifest>` (above `<application>`):
 <uses-permission android:name="android.permission.INTERNET"/>
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-<!-- Only if you later add background pinging via a foreground service:
-<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
+<!-- On-duty tracking runs geolocator's location foreground service.
+     FOREGROUND_SERVICE_LOCATION is the Android 14+ (API 34) split of
+     FOREGROUND_SERVICE; WAKE_LOCK backs enableWakeLock so pings keep
+     flowing with the screen off. -->
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
--->
+<uses-permission android:name="android.permission.WAKE_LOCK"/>
+
+<!-- Android 13+ runtime permission for the tracking notice and the
+     location-off countdown. Requested at check-in, not at launch. -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+```
+
+`ACCESS_BACKGROUND_LOCATION` is deliberately **not** requested: the foreground
+service is started while the app is in the foreground, which is exactly the case
+Android exempts, and asking for it triggers a Play Store policy review.
+
+`android/app/build.gradle.kts` also needs core-library desugaring, which
+`flutter_local_notifications` requires:
+
+```kotlin
+compileOptions { isCoreLibraryDesugaringEnabled = true /* ... */ }
+dependencies { coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4") }
 ```
 
 ### 2. Cleartext HTTP for local dev (the dev backend is plain `http://`)
@@ -112,11 +131,14 @@ class MainActivity : FlutterFragmentActivity()
 
 ```
 lib/
-  core/      config.dart (base URL, intervals) · theme.dart (dark UI)
+  core/      config.dart (base URL, intervals, grace period) · theme.dart (dark UI)
   data/      session.dart (secure token store) · api_client.dart (JWT REST + 401 handling) · models.dart
   services/  auth · profile · tracking (geolocator + ingest) · attendance
-  state/     auth_controller · duty_controller (check-in/out + 15s ping loop)
-  ui/        login · home_shell (bottom nav) · duty · history · profile · widgets/hold_button
+             connectivity (interface up/down) · notification (channels + countdown)
+  state/     auth_controller · duty_controller (readiness gate, check-in/out,
+             15s ping loop, location watchdog)
+  ui/        login · home_shell (bottom nav + warning banner) · duty · history · profile
+             widgets/hold_button · widgets/preflight_dialog · widgets/location_warning_banner
 ```
 
 - **Auth:** stateless JWT bearer. Token in the platform keystore
@@ -126,6 +148,27 @@ lib/
 - **Check-in = presence reporting.** Holding "Check In" for 5s runs the
   verify steps (internet → location) then sends an `on-duty` ping and starts a
   15s ping timer; "Check Out" sends one `offline` ping and stops.
+- **Check-in is gated.** `DutyController` watches internet (`connectivity_plus`)
+  and location (geolocator service status + a 5s permission poll) continuously.
+  Check In only appears when both are on; otherwise the Duty tab shows what is
+  missing and opens a prompt with deep links to the OS location and network
+  settings. The gate is re-verified inside `checkIn()` too, since it can go
+  stale during the 5s hold.
+- **On-duty location watchdog.** While on duty, a persistent notification states
+  that location is being shared with the organization. If location is switched
+  off, the user gets **2 minutes** (`AppConfig.locationGrace`) to restore it —
+  counted down in an in-app banner (visible on every tab) *and* in a system
+  notification, so it lands with the app backgrounded. If the countdown expires,
+  the app checks the user out by itself and sends a final `offline` ping with
+  `statusReason: "location-disabled"` so the roster can tell an automatic
+  check-out apart from a deliberate one.
+- **Background survival.** On-duty position updates run through geolocator's
+  Android location **foreground service** (its notification is the "tracking is
+  on" disclosure) and, on iOS, `UIBackgroundModes: location` with
+  `allowBackgroundLocationUpdates`. Note geolocator's own caveat: a foreground
+  service raises the process priority but does not make Android's killing of a
+  destroyed activity impossible — for hard guarantees you still need a
+  dedicated background-geolocation engine.
 
 ---
 
@@ -141,10 +184,17 @@ lib/
    or department fields, so the Profile screen shows `—` for those. Role shows
    the raw role UUID (as in the screenshot) — there's no role-name resolution
    endpoint for employees yet.
-3. **Foreground/background pinging.** The 15s ping loop runs while the app is in
-   the foreground. For reliable on-duty tracking with the screen off, add a
-   foreground location service (e.g. `flutter_background_geolocation` or a
-   platform foreground service) — scaffolding noted in the manifest above.
+3. **Internet check is interface-level.** `connectivity_plus` reports whether a
+   network interface is up, not whether the internet is actually reachable —
+   connected Wi-Fi with a dead uplink still reads as online. That is deliberate
+   for the pre-check-in gate (instant, no traffic); the real end-to-end test is
+   the `/api/tracking/ingest` call during check-in, which fails the shift if the
+   network is truly dead.
+4. **Process death still ends tracking.** The foreground service keeps a shift
+   alive while the app is backgrounded, but if Android kills the process (or the
+   user force-stops it) the ping loop and the 2-minute watchdog stop with it —
+   no ping is sent, so the roster just ages the last position out. A
+   headless/background-isolate engine would be needed to close that gap.
 
 ## iOS Setup & Run
 

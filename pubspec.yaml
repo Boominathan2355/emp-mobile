@@ -15,6 +15,9 @@ dependencies:
   provider: ^6.1.2            # lightweight state
   local_auth: ^2.3.0          # biometric (fingerprint / face) login toggle
   intl: ^0.19.0               # date/time formatting for History
+  flutter_local_notifications: ^22.3.0  # duty tracking notice + location-off countdown
+  connectivity_plus: ^7.3.1    # internet check gating check-in
+  app_settings: ^9.0.0         # deep-link to the OS location / network settings
 
 dev_dependencies:
   flutter_test:
