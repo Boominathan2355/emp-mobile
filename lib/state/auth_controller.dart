@@ -61,10 +61,14 @@ class AuthController extends ChangeNotifier {
 
   Future<void> _loadProfile(String username) async {
     try {
-      user = await _profiles.currentUser(username);
-    } catch (_) {
-      // Profile lookup is best-effort; keep the session even if it fails.
-      user = null;
+      user = await _profiles.currentUser();
+    } catch (e) {
+      // Profile lookup is best-effort: the session is already valid, so fall
+      // back to a minimal profile rather than stranding the caller outside the
+      // app. Duty and History work off the session, so login still lands on
+      // the Duty tab; only the Profile tab shows blanks.
+      debugPrint('[auth] profile lookup failed for "$username": $e');
+      user = AppUser.placeholder(username);
     }
     status = AuthStatus.signedIn;
     notifyListeners();

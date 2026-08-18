@@ -21,4 +21,20 @@ class AppConfig {
 
   /// Hold duration on the Check In / Check Out button (matches the UI copy).
   static const Duration holdToConfirm = Duration(seconds: 5);
+
+  /// How long someone on duty may leave location services off before the app
+  /// takes them off duty by itself. The countdown is surfaced both in-app and
+  /// as a system notification so it is visible with the app backgrounded.
+  static const Duration locationGrace = Duration(minutes: 2);
+
+  /// How often the duty watchdog re-checks that location is still usable.
+  /// The OS service-status stream covers the GPS toggle; this poll is what
+  /// catches a *permission* revoked from the app-settings screen, which that
+  /// stream never reports.
+  static const Duration locationWatchdogInterval = Duration(seconds: 5);
+
+  /// `statusReason` sent with the automatic off-duty ping so the roster can
+  /// tell it apart from someone deliberately checking out. Kept in sync with
+  /// emp-be `docs/tracking-fe-integration.md`.
+  static const String reasonLocationDisabled = 'location-disabled';
 }

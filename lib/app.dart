@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/theme.dart';
 import 'data/models.dart';
 import 'state/auth_controller.dart';
+import 'state/duty_controller.dart';
 import 'ui/duty_screen.dart';
 import 'ui/history_screen.dart';
 import 'ui/home_shell.dart';
@@ -38,12 +39,17 @@ class EmpApp extends StatelessWidget {
                 },
               );
             case '/duty':
+              // Standalone route (deep link / direct push): HomeShell normally
+              // owns the DutyController, so this entry point brings its own.
               return MaterialPageRoute(
                 builder: (ctx) {
                   final user = (settings.arguments as AppUser?) ??
                       ctx.read<AuthController>().user;
                   if (user == null) return const LoginScreen();
-                  return DutyScreen(user: user);
+                  return ChangeNotifierProvider(
+                    create: (_) => DutyController(user),
+                    child: const DutyScreen(),
+                  );
                 },
               );
             case '/profile':
@@ -77,25 +83,10 @@ class _Gate extends StatelessWidget {
       case AuthStatus.signedOut:
         return const LoginScreen();
       case AuthStatus.signedIn:
+        // _loadProfile always leaves a profile behind (a placeholder when the
+        // lookup fails), so signing in goes straight to the Duty tab.
         final user = auth.user;
-        if (user == null) {
-          // Signed in but profile lookup failed — offer a retry via logout.
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Signed in, but your profile could not load.'),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () => context.read<AuthController>().logout(),
-                    child: const Text('Back to login'),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
+        if (user == null) return const LoginScreen();
         return HomeShell(user: user);
     }
   }
