@@ -1,5 +1,5 @@
 name: emp_mobile
-description: Employee location-tracking & duty app (Android-first). Talks to emp-core-service + emp-tracking-service.
+description: Employee location-tracking & duty app (Android & iOS). Talks to emp-core-service + emp-tracking-service.
 publish_to: "none"
 version: 0.1.0+1
 

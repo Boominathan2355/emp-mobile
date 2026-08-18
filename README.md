@@ -1,8 +1,8 @@
-# Emp Mobile — Employee Location Tracking (Flutter, Android-first)
+# Emp Mobile — Employee Location Tracking (Flutter, Android & iOS)
 
 A field-employee app for the Emp platform: sign in, go on/off duty (which streams
 GPS to the tracking backend), review attendance history, and manage your profile.
-Built to match the provided UI screenshots. **Android first; iOS later.**
+Built to match the provided UI screenshots. **Supports both Android and iOS.**
 
 Talks to the existing backend (`../emp_server`) — no backend changes required:
 
@@ -146,10 +146,27 @@ lib/
    foreground location service (e.g. `flutter_background_geolocation` or a
    platform foreground service) — scaffolding noted in the manifest above.
 
-## iOS (later)
+## iOS Setup & Run
 
-`flutter create` above already lays down `ios/`. Before running on iOS add to
-`ios/Runner/Info.plist`: `NSLocationWhenInUseUsageDescription`,
-`NSFaceIDUsageDescription`, and (for dev cleartext) an `NSAppTransportSecurity`
-exception. Then `flutter run -d ios`.
-# emp-mobile
+`flutter create` above generates `ios/`. Before running on iOS, add the following to `ios/Runner/Info.plist`:
+
+```xml
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Location access is required to report duty location pings.</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>Location access is required for continuous duty tracking.</string>
+<key>NSFaceIDUsageDescription</key>
+<string>Face ID authentication is required to unlock your session.</string>
+
+<!-- For local dev cleartext HTTP -->
+<key>NSAppTransportSecurity</key>
+<dict>
+  <key>NSAllowsArbitraryLoads</key>
+  <true/>
+</dict>
+```
+
+Run on iOS Simulator or physical iOS device:
+```bash
+flutter run -d ios
+```
