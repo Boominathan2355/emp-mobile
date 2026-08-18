@@ -32,7 +32,7 @@ existing `lib/` or `pubspec.yaml`):
 
 ```bash
 cd emp_mobile
-flutter create --org tech.devopslabs --project-name emp_mobile --platforms=android,ios .
+flutter create --project-name emp_mobile --platforms=android,ios .
 flutter pub get
 ```
 

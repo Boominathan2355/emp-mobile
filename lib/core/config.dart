@@ -13,7 +13,7 @@
 class AppConfig {
   static const String coreBase = String.fromEnvironment(
     'CORE_BASE',
-    defaultValue: 'http://10.0.2.2:8000',
+    defaultValue: 'https://emp-be-azew.onrender.com',
   );
 
   /// How often to report position to `/api/tracking/ingest` while on duty.
