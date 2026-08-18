@@ -119,16 +119,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                 strokeWidth: 2, color: Colors.white))
                         : const Text('Sign in', style: TextStyle(fontSize: 16)),
                   ),
-                  FutureBuilder<bool>(
-                    future: Session.instance.biometricEnabled(),
-                    builder: (context, snap) => (snap.data == true &&
-                            Session.instance.token != null)
-                        ? TextButton.icon(
-                            onPressed: _biometric,
-                            icon: const Icon(Icons.fingerprint),
-                            label: const Text('Unlock with biometrics'),
-                          )
-                        : const SizedBox.shrink(),
+                  FutureBuilder<List<bool>>(
+                    future: Future.wait([
+                      Session.instance.biometricEnabled(),
+                      Session.instance.faceEnabled(),
+                    ]),
+                    builder: (context, snap) {
+                      final hasBio = snap.data?[0] ?? false;
+                      final hasFace = snap.data?[1] ?? false;
+                      if ((hasBio || hasFace) && Session.instance.token != null) {
+                        return TextButton.icon(
+                          onPressed: _biometric,
+                          icon: Icon(hasFace ? Icons.face : Icons.fingerprint),
+                          label: Text(hasFace && hasBio
+                              ? 'Unlock with Biometrics / Face ID'
+                              : hasFace
+                                  ? 'Unlock with Face ID'
+                                  : 'Unlock with fingerprint'),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
                   ),
                 ],
               ),

@@ -20,12 +20,16 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _profiles = ProfileService();
   bool _biometric = false;
+  bool _face = false;
 
   @override
   void initState() {
     super.initState();
     Session.instance.biometricEnabled().then((v) {
       if (mounted) setState(() => _biometric = v);
+    });
+    Session.instance.faceEnabled().then((v) {
+      if (mounted) setState(() => _face = v);
     });
   }
 
@@ -86,17 +90,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: AppTheme.card,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: SwitchListTile(
-              value: _biometric,
-              activeThumbColor: AppTheme.accent,
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Biometric login'),
-              subtitle: const Text('Unlock with fingerprint / face',
-                  style: TextStyle(color: AppTheme.textMuted)),
-              onChanged: (v) async {
-                await Session.instance.setBiometricEnabled(v);
-                setState(() => _biometric = v);
-              },
+            child: Column(
+              children: [
+                SwitchListTile(
+                  value: _biometric,
+                  activeThumbColor: AppTheme.accent,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Biometric login'),
+                  subtitle: const Text('Unlock with fingerprint',
+                      style: TextStyle(color: AppTheme.textMuted)),
+                  onChanged: (v) async {
+                    await Session.instance.setBiometricEnabled(v);
+                    setState(() => _biometric = v);
+                  },
+                ),
+                const Divider(color: Color(0xFF3A3B40), height: 1),
+                SwitchListTile(
+                  value: _face,
+                  activeThumbColor: AppTheme.accent,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Face unlock'),
+                  subtitle: const Text('Unlock with face recognition / Face ID',
+                      style: TextStyle(color: AppTheme.textMuted)),
+                  onChanged: (v) async {
+                    await Session.instance.setFaceEnabled(v);
+                    setState(() => _face = v);
+                  },
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),

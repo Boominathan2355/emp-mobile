@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme.dart';
@@ -78,6 +79,15 @@ class _DutyBody extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Color(0xFFE5484D))),
                 ),
+                if (duty.error!.contains('App Settings') ||
+                    duty.error!.contains('permanently denied')) ...[
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: () => Geolocator.openAppSettings(),
+                    icon: const Icon(Icons.settings),
+                    label: const Text('Open App Settings'),
+                  ),
+                ],
               ],
             ],
           ),

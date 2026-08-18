@@ -23,14 +23,19 @@ class AuthController extends ChangeNotifier {
   String? error;
 
   Future<void> bootstrap() async {
-    await Session.instance.load();
-    final username = await _auth.restore();
-    if (username == null) {
+    try {
+      await Session.instance.load();
+      final username = await _auth.restore();
+      if (username == null) {
+        status = AuthStatus.signedOut;
+        notifyListeners();
+        return;
+      }
+      await _loadProfile(username);
+    } catch (e) {
       status = AuthStatus.signedOut;
       notifyListeners();
-      return;
     }
-    await _loadProfile(username);
   }
 
   Future<bool> login(String identifier, String password) async {

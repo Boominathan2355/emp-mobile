@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme.dart';
+import 'data/models.dart';
 import 'state/auth_controller.dart';
+import 'ui/duty_screen.dart';
+import 'ui/history_screen.dart';
 import 'ui/home_shell.dart';
 import 'ui/login_screen.dart';
+import 'ui/profile_screen.dart';
 
 class EmpApp extends StatelessWidget {
   const EmpApp({super.key});
@@ -18,6 +22,42 @@ class EmpApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
         home: const _Gate(),
+        routes: {
+          '/login': (_) => const LoginScreen(),
+          '/history': (_) => const HistoryScreen(),
+        },
+        onGenerateRoute: (settings) {
+          switch (settings.name) {
+            case '/home':
+              return MaterialPageRoute(
+                builder: (ctx) {
+                  final user = (settings.arguments as AppUser?) ??
+                      ctx.read<AuthController>().user;
+                  if (user == null) return const LoginScreen();
+                  return HomeShell(user: user);
+                },
+              );
+            case '/duty':
+              return MaterialPageRoute(
+                builder: (ctx) {
+                  final user = (settings.arguments as AppUser?) ??
+                      ctx.read<AuthController>().user;
+                  if (user == null) return const LoginScreen();
+                  return DutyScreen(user: user);
+                },
+              );
+            case '/profile':
+              return MaterialPageRoute(
+                builder: (ctx) {
+                  final user = (settings.arguments as AppUser?) ??
+                      ctx.read<AuthController>().user;
+                  if (user == null) return const LoginScreen();
+                  return ProfileScreen(user: user);
+                },
+              );
+          }
+          return null;
+        },
       ),
     );
   }

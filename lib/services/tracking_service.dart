@@ -14,15 +14,18 @@ class TrackingService {
   /// message on refusal so the Duty screen can surface it.
   Future<void> ensureLocationReady() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
-      throw StateError('Location services are disabled. Enable GPS to check in.');
+      throw StateError('Location services (GPS) are disabled. Enable location to check in.');
     }
     var perm = await Geolocator.checkPermission();
     if (perm == LocationPermission.denied) {
       perm = await Geolocator.requestPermission();
     }
-    if (perm == LocationPermission.denied ||
-        perm == LocationPermission.deniedForever) {
-      throw StateError('Location permission denied. Allow it to check in.');
+    if (perm == LocationPermission.deniedForever) {
+      throw StateError(
+          'Location permission is permanently denied. Please enable it in App Settings.');
+    }
+    if (perm == LocationPermission.denied) {
+      throw StateError('Location permission denied. Allow location access to check in.');
     }
   }
 
