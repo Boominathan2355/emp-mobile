@@ -22,7 +22,7 @@ source only. On your dev machine:
 
 - Flutter SDK ≥ 3.4 (`flutter --version`)
 - Android Studio + an emulator or a physical device with USB debugging
-- The backend running and reachable (`../emp_server` — `docker compose up`, gateway on `:8000`)
+- The backend running and reachable (`../emp_server` — `docker compose up`, app on `:8000`)
 
 ## First-time setup
 
@@ -111,7 +111,7 @@ Reference it on the `<application>` tag in the manifest:
     ... >
 ```
 
-> Drop the cleartext config for production — use HTTPS behind the gateway.
+> Drop the cleartext config for production — use HTTPS.
 
 ### 3. Biometric — `MainActivity`
 
@@ -193,8 +193,20 @@ lib/
 4. **Process death still ends tracking.** The foreground service keeps a shift
    alive while the app is backgrounded, but if Android kills the process (or the
    user force-stops it) the ping loop and the 2-minute watchdog stop with it —
-   no ping is sent, so the roster just ages the last position out. A
-   headless/background-isolate engine would be needed to close that gap.
+   no `offline` ping is sent, so the web roster keeps showing the last reported
+   status and position **indefinitely**: the backend has no server-side
+   staleness rule, so `status` is only ever what this app last sent. A
+   headless/background-isolate engine would be needed to close that gap (and a
+   server-side "older than N minutes ⇒ offline" rule would make the roster
+   self-healing regardless).
+5. **Every ping depends on the backend having its tracking endpoints registered.**
+   `/api/tracking/**` is served by the same application as the rest of the API, so
+   there is no second service to configure. If that application is deployed without
+   its tracking controllers registered, check-in and the 15s duty pings fail with
+   **404** `No static resource api/tracking/ingest` — surfaced verbatim by
+   `api_client`'s error path. That's a deployment fault, never an app bug, and no
+   mobile change can fix it. **401** likewise means the token was rejected (e.g. the
+   backend restarted with no `EMP_JWT_SECRET` and generated a new random key).
 
 ## iOS Setup & Run
 

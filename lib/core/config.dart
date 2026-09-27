@@ -1,15 +1,26 @@
 /// Service configuration. Mirrors the web app's `src/lib/config.ts`.
 ///
-/// Both backends share the same origin behind the nginx gateway: everything
-/// under `/api/**` goes to emp-core-service, and `/api/tracking/**` is routed
-/// to emp-tracking-service. From the client's view it is one base URL.
+/// One base URL covers everything. Core and tracking are a single backend
+/// application (`emp-core-service`, port 8000), so `/api/**` and
+/// `/api/tracking/**` are served by the same process on the same origin — there
+/// is no second service to point at and no proxy hop.
+///
+/// One origin matters here because login returns a JWT that this app sends as
+/// `Authorization: Bearer`, which the backend accepts for every authenticated
+/// endpoint (the web app uses the `access_token` cookie instead).
+///
+/// If `/api/tracking/ingest` answers **404 "No static resource"**, the deployed
+/// backend is missing its tracking controllers — a server-side deployment
+/// problem, not this app. **401** means the token was rejected, **200/201** means
+/// it worked. Nothing to change here.
 ///
 /// Override at build/run time without editing this file:
 ///   flutter run --dart-define=CORE_BASE=http://192.168.1.20:8000
 ///
-/// Defaults to `10.0.2.2:8000`, which is how the **Android emulator** reaches
-/// `localhost` on the host machine. For a physical device, pass your machine's
-/// LAN IP via --dart-define (the emulator alias won't resolve there).
+/// Defaults to the deployed backend. For local work pass `http://10.0.2.2:8000`,
+/// which is how the **Android emulator** reaches `localhost` on the host
+/// machine. For a physical device, pass your machine's LAN IP via --dart-define
+/// (the emulator alias won't resolve there).
 class AppConfig {
   static const String coreBase = String.fromEnvironment(
     'CORE_BASE',
