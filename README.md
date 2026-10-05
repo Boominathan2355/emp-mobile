@@ -190,15 +190,18 @@ lib/
    for the pre-check-in gate (instant, no traffic); the real end-to-end test is
    the `/api/tracking/ingest` call during check-in, which fails the shift if the
    network is truly dead.
-4. **Process death still ends tracking.** The foreground service keeps a shift
-   alive while the app is backgrounded, but if Android kills the process (or the
-   user force-stops it) the ping loop and the 2-minute watchdog stop with it —
-   no `offline` ping is sent, so the web roster keeps showing the last reported
-   status and position **indefinitely**: the backend has no server-side
-   staleness rule, so `status` is only ever what this app last sent. A
-   headless/background-isolate engine would be needed to close that gap (and a
-   server-side "older than N minutes ⇒ offline" rule would make the roster
-   self-healing regardless).
+4. **Process death still ends tracking — but the server now catches it.** The
+   foreground service keeps a shift alive while the app is backgrounded, but if
+   Android kills the process (or the user force-stops it) the ping loop and the
+   2-minute watchdog stop with it, so no final `offline` ping is sent. **The
+   backend covers that**: `GET /api/tracking/locations` treats a row whose newest
+   ping is older than **20 minutes** as `offline` (`EMP_TRACKING_OFFLINE_AFTER`,
+   default `PT20M`), so a killed app stops counting as live on its own and the
+   roster is self-healing without any mobile change. The row keeps its last known
+   coordinates, and `lastPingAt` is what distinguishes a decayed row from a
+   deliberate check-out. A headless/background-isolate engine would still be
+   needed to end the *shift* itself (attendance is not integrated yet), but the
+   live-tracking view no longer depends on it.
 5. **Every ping depends on the backend having its tracking endpoints registered.**
    `/api/tracking/**` is served by the same application as the rest of the API, so
    there is no second service to configure. If that application is deployed without
